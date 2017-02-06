@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+	<title>获取元素的真实background-color</title>
+	<style type="text/css">
+		.div{width:90px;height:90px;}
+		.parentDiv{background-color:green;}
+		.div3{background-color:yellow;}
+		.div5{opacity:0;}
+		.div6{visibility:hidden;}
+	</style>
+</head>
+<body style="background-color: aqua;">
+	<div class="parentDiv">
+		<div id="elem1" class="div div1">
+			div1
+		</div>
+	</div>
+	<div id="elem2" class="div div2" style="background-color:red;">
+		div2
+	</div>
+	<div id="elem3" class="div div3">
+		div3
+	</div>
+	<div id="elem4" class="div">
+		div4
+	</div>
+	<div id="elem5" class="div div5">
+		div5
+	</div>
+	<div style="background-color: gray;">
+		<div id="elem6" class="div div6">
+			div6
+		</div>
+	</div>
+
+	<script type="text/javascript">
+
+	/**
+	*  还需要考虑的情况有 1.!important、2.父元素设置了不可见。
+	*  改进： 颜色值可以统一转换
+	*  参考自 http://www.jianshu.com/p/e94b5779f998
+	*/
+
+	+(function($) {
+
+		'use strict';
+
+		// 将横线css样式转换为驼峰样式
+		function camelize(str){
+			return str.replace(/-(\w)/g,function(matchStr, p){
+				return p.toUpperCase();
+			})
+		}
+
+		// 获取元素颜色值
+		function getStyle(elem,style){
+
+			// 安全判定
+			if(typeof elem == 'undefined' || typeof style == 'undefined'){
+				console.log("Param is Empty!");
+				return;
+			};
+
+			// 获取行内背景颜色样式
+			var value = elem.style[camelize(style)],
+				css;
+
+			// 如果行内不存在则获取所有计算样式
+			if(!value){
+
+				var win = document.defaultView; // document.defaultView 是指文档元素所对应的window对象 
+
+				if(win && win.getComputedStyle){
+					// 获取元素所有样式
+					css = win.getComputedStyle(elem,null); 			// getComputedStyle("元素", "伪类");
+					// 在所有元素样式中查找style
+					value = css ? css.getPropertyValue(style) : null;
+				}
+			}
+
+			return value;
+
+		}
+
+		// 检测颜色是否有效
+		function checkColor(elem){
+			var value = getStyle(elem,'background-color'),
+				hasBgColor = !!value;
+			
+			// 颜色值是否为透明色
+			switch(value){
+				case 'transparent':
+				case 'rgb(0, 0, 0)':
+				case 'rgba(0, 0, 0, 0)':
+
+				hasBgColor = false;
+			}
+
+			// 元素是否可见
+			var properties = {
+				opacity: 0,
+				display: 'none',
+				visibility: 'hidden'
+			}
+
+			for (var key in properties) {
+				(getStyle(elem,key) == properties[key])
+					&& (hasBgColor = false);
+			}
+
+			return hasBgColor;
+
+		}
+
+		// 最终元素背景颜色
+		$.getRealBg = function(el){
+
+			// 如果检测到颜色则中断返回
+			if(checkColor(el)){
+				return getStyle(el,'background-color');
+			}
+
+			// 否则就一直递归检测父元素
+			if(el != document.documentElement){
+				return $.getRealBg(el.parentNode);
+			}
+
+			// 检测完了还是没有就返回空
+			return '';
+
+		}
+
+	})(window.EXT || (window.EXT = {}))
+
+
+	// 检测校验
+	var elems = document.querySelectorAll('.div');
+
+	[].forEach.call(elems,function(item,i){
+
+		var el = document.querySelector('#elem' + (i+1));
+
+		console.log("el" + (i+1), "background-color:", EXT.getRealBg(el));
+	})
+
+	</script>
+</body>
+</html>
